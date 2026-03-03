@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TJA Trivia — Host Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f14; --surface:#16161e; --surface2:#1e1e2a; --border:#2a2a3a;
+  --accent:#7c6dfa; --accent2:#fa6d8f; --green:#4ade80; --amber:#fbbf24;
+  --red:#f87171; --text:#e2e2f0; --text-dim:#6b6b8a; --white:#ffffff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 20%,rgba(124,109,250,0.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,rgba(250,109,143,0.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
+.screen{display:none;position:relative;z-index:1;} .screen.active{display:block;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--white);display:flex;align-items:center;gap:10px;}
+.topbar-brand span{color:var(--accent);}
+.topbar-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+.container{max-width:900px;margin:0 auto;padding:32px 24px;}
+.container-wide{max-width:1100px;margin:0 auto;padding:32px 24px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:20px;}
+.card-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--text-dim);margin-bottom:20px;display:flex;align-items:center;gap:10px;}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.setup-hero{text-align:center;padding:48px 24px 32px;}
+.setup-hero h1{font-family:'Syne',sans-serif;font-size:clamp(32px,5vw,52px);font-weight:800;color:var(--white);margin-bottom:10px;}
+.setup-hero h1 span{color:var(--accent);}
+.setup-hero p{font-size:15px;color:var(--text-dim);font-weight:300;}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;}
+input[type=text],input[type=number],textarea,select{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:10px 14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,109,250,0.15);}
+textarea{resize:vertical;min-height:70px;}
+select{cursor:pointer;}
+.field{margin-bottom:16px;}
+.field-row{display:flex;gap:14px;}
+.field-row .field{flex:1;}
+.players-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+.player-chip{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;font-weight:500;}
+.player-chip .remove-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;line-height:1;transition:color 0.15s;}
+.player-chip .remove-btn:hover{color:var(--red);}
+.player-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);background:rgba(124,109,250,0.12);padding:2px 6px;border-radius:4px;}
+.add-player-row{display:flex;gap:10px;}
+.add-player-row input{flex:1;}
+.question-item{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:20px;margin-bottom:12px;position:relative;}
+.question-item .q-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);background:rgba(124,109,250,0.12);padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:12px;}
+.q-remove{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;transition:color 0.15s;}
+.q-remove:hover{color:var(--red);}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
+.option-row{display:flex;align-items:center;gap:8px;}
+.option-letter{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--accent);width:20px;flex-shrink:0;}
+.btn{border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:var(--accent);color:white;padding:12px 24px;font-size:14px;}
+.btn-primary:hover{background:#6a5cf0;transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,109,250,0.35);}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);padding:10px 20px;font-size:13px;}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:7px 14px;font-size:12px;}
+.btn-add-q{width:100%;padding:14px;background:transparent;border:2px dashed var(--border);border-radius:10px;color:var(--text-dim);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-add-q:hover{border-color:var(--accent);color:var(--accent);background:rgba(124,109,250,0.05);}
+.game-code-display{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--accent);letter-spacing:8px;text-align:center;padding:20px;background:rgba(124,109,250,0.08);border:2px solid rgba(124,109,250,0.25);border-radius:12px;margin:16px 0;}
+.game-url{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim);text-align:center;word-break:break-all;margin-top:8px;}
+.waiting-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.waiting-player{background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:14px 12px;text-align:center;font-size:13px;font-weight:500;transition:border-color 0.3s;}
+.waiting-player.joined{border-color:var(--green);background:rgba(74,222,128,0.06);color:var(--green);}
+.waiting-player .join-dot{width:8px;height:8px;border-radius:50%;background:var(--border);margin:0 auto 8px;transition:background 0.3s;}
+.waiting-player.joined .join-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,0.5);}
+.question-display{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;text-align:center;margin-bottom:24px;}
+.q-progress{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:16px;}
+.q-text{font-family:'Syne',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:700;color:var(--white);line-height:1.4;margin-bottom:24px;}
+.q-type-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-bottom:20px;}
+.badge-mc{background:rgba(124,109,250,0.15);color:var(--accent);}
+.badge-tf{background:rgba(251,191,36,0.15);color:var(--amber);}
+.badge-text{background:rgba(74,222,128,0.12);color:var(--green);}
+.timer-wrap{margin-bottom:24px;}
+.timer-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px;display:flex;justify-content:space-between;}
+.timer-num{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--accent);transition:color 0.3s;}
+.timer-num.warn{color:var(--amber);}
+.timer-num.danger{color:var(--red);animation:pulse 0.5s infinite;}
+.timer-bar-bg{width:100%;height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+.timer-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#a78bfa);border-radius:4px;transition:width 1s linear,background 0.3s;}
+.timer-bar-fill.warn{background:linear-gradient(90deg,var(--amber),#f59e0b);}
+.timer-bar-fill.danger{background:linear-gradient(90deg,var(--red),#fb923c);}
+.answers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px;}
+.answer-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;}
+.answer-card.correct{border-color:var(--green);background:rgba(74,222,128,0.06);}
+.answer-card.wrong{border-color:var(--red);background:rgba(248,113,113,0.06);}
+.answer-card.pending{border-color:var(--amber);background:rgba(251,191,36,0.05);}
+.answer-player{font-size:13px;font-weight:600;margin-bottom:5px;}
+.answer-value{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim);}
+.answer-pts{font-size:11px;font-weight:700;margin-top:4px;}
+.answer-card.correct .answer-pts{color:var(--green);}
+.answer-card.wrong .answer-pts{color:var(--red);}
+.score-list{list-style:none;}
+.score-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:10px;margin-bottom:8px;background:var(--surface2);border:1.5px solid var(--border);}
+.score-item:nth-child(1){border-color:rgba(251,191,36,0.5);background:rgba(251,191,36,0.06);}
+.score-rank{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text-dim);width:32px;text-align:center;flex-shrink:0;}
+.score-item:nth-child(1) .score-rank{color:var(--amber);}
+.score-name{flex:1;font-size:15px;font-weight:600;}
+.score-pts{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--accent);}
+.score-delta{font-family:'DM Mono',monospace;font-size:11px;color:var(--green);background:rgba(74,222,128,0.1);padding:2px 7px;border-radius:4px;}
+.correct-answer-reveal{background:rgba(74,222,128,0.1);border:1.5px solid rgba(74,222,128,0.3);border-radius:10px;padding:14px 20px;font-size:15px;font-weight:600;color:var(--green);text-align:center;margin-bottom:16px;}
+.section-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:20px;}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;}
+.alert-info{background:rgba(124,109,250,0.1);border:1px solid rgba(124,109,250,0.25);color:#a78bfa;}
+.badge{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(124,109,250,0.12);color:var(--accent);}
+.mt-16{margin-top:16px;}
+.winner-display{text-align:center;padding:40px;}
+.winner-crown{font-size:64px;margin-bottom:16px;}
+.winner-name{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--amber);margin-bottom:8px;}
+.winner-score{font-family:'DM Mono',monospace;font-size:18px;color:var(--text-dim);}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 1.5s infinite;}
+.game-grid{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+.text-dim{color:var(--text-dim);font-size:13px;}
+@media(max-width:768px){.game-grid{grid-template-columns:1fr;} .field-row{flex-direction:column;}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:fadeUp 0.4s ease both;}
+</style>
+</head>
+<body>
+
+<!-- SCREEN: SETUP -->
+<div class="screen active" id="screen-setup">
+  <div class="topbar">
+    <div class="topbar-brand">TJA <span>Trivia</span></div>
+    <div class="topbar-meta">Host Console</div>
+  </div>
+  <div class="container">
+    <div class="setup-hero">
+      <h1>Host <span>Setup</span></h1>
+      <p>Configure your game, add players and questions, then launch.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Game Info</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Game Title</label>
+          <input type="text" id="game-title" value="TJA Youth Trivia" placeholder="e.g. March 2026 Bible Trivia">
+        </div>
+        <div class="field" style="max-width:160px">
+          <label>Timer Per Question (secs)</label>
+          <input type="number" id="q-timer" value="30" min="5" max="120">
+        </div>
+        <div class="field" style="max-width:160px">
+          <label>Points Per Question</label>
+          <input type="number" id="q-points" value="10" min="1" max="100">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Players <span class="badge" id="player-count-badge">0 / 15</span></div>
+      <div class="players-grid" id="players-grid"></div>
+      <div class="add-player-row">
+        <input type="text" id="new-player-input" placeholder="Player or team name..." maxlength="30">
+        <button class="btn btn-secondary" onclick="addPlayer()">+ Add</button>
+      </div>
+      <div class="text-dim mt-16" style="font-size:12px">Press Enter to quickly add. Up to 15 players/teams.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Questions</div>
+      <div id="questions-list"></div>
+      <button class="btn-add-q" onclick="addQuestion()">＋ Add Question</button>
+    </div>
+
+    <div class="section-actions">
+      <button class="btn btn-primary" onclick="createGame()">▶ Create &amp; Launch Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: LOBBY -->
+<div class="screen" id="screen-lobby">
+  <div class="topbar">
+    <div class="topbar-brand">TJA <span>Trivia</span></div>
+    <div class="topbar-meta" id="lobby-title-meta">Lobby</div>
+  </div>
+  <div class="container">
+    <div class="card animate-in" style="text-align:center;padding:36px">
+      <div class="card-title" style="justify-content:center">Share this code with players</div>
+      <div class="game-code-display" id="lobby-code">------</div>
+      <div class="game-url" id="lobby-url"></div>
+      <div class="alert alert-info mt-16">📱 Players open <strong>trivia-player.html</strong> on their device and enter this code</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Waiting for Players <span class="badge" id="joined-count">0 joined</span></div>
+      <div class="waiting-grid" id="waiting-grid"></div>
+    </div>
+    <div class="section-actions">
+      <button class="btn btn-secondary" onclick="goToSetup()">← Back</button>
+      <button class="btn btn-primary" onclick="startGame()">Start Game →</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: GAME -->
+<div class="screen" id="screen-game">
+  <div class="topbar">
+    <div class="topbar-brand">TJA <span>Trivia</span></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="status-dot live"></div>
+      <div class="topbar-meta" id="game-status-meta">LIVE</div>
+    </div>
+  </div>
+  <div class="container-wide">
+    <div class="game-grid">
+      <div>
+        <div class="question-display animate-in">
+          <div class="q-progress" id="q-progress">QUESTION 1 OF 1</div>
+          <div id="q-type-badge-el" class="q-type-badge badge-mc">Multiple Choice</div>
+          <div class="q-text" id="q-text-display">Loading...</div>
+          <div class="timer-wrap">
+            <div class="timer-label">
+              <span>TIME REMAINING</span>
+              <span class="timer-num" id="timer-num">30</span>
+            </div>
+            <div class="timer-bar-bg"><div class="timer-bar-fill" id="timer-bar"></div></div>
+          </div>
+        </div>
+        <div class="card" id="answers-review" style="display:none">
+          <div class="card-title">Player Answers</div>
+          <div class="correct-answer-reveal" id="correct-reveal"></div>
+          <div class="answers-grid" id="answers-grid"></div>
+          <div class="section-actions">
+            <button class="btn btn-primary" id="btn-next-q" onclick="nextQuestion()">Next Question →</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Live Standings</div>
+          <ul class="score-list" id="score-list"></ul>
+        </div>
+        <div class="card">
+          <div class="card-title">Responses</div>
+          <div id="response-count" class="text-dim">Waiting for answers...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN: FINAL -->
+<div class="screen" id="screen-final">
+  <div class="topbar">
+    <div class="topbar-brand">TJA <span>Trivia</span></div>
+    <div class="topbar-meta">Final Results</div>
+  </div>
+  <div class="container">
+    <div class="card winner-display animate-in">
+      <div class="winner-crown">🏆</div>
+      <div class="winner-name" id="winner-name">—</div>
+      <div class="winner-score" id="winner-score">0 points</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Final Standings</div>
+      <ul class="score-list" id="final-score-list"></ul>
+    </div>
+    <div class="section-actions">
+      <button class="btn btn-primary" onclick="resetAll()">↺ New Game</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, remove, off } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBKO1o0854pgQ53gg67i8eVqLXczR4v9NY",
+  authDomain: "trivia-game-v1-3ca55.firebaseapp.com",
+  databaseURL: "https://trivia-game-v1-3ca55-default-rtdb.firebaseio.com",
+  projectId: "trivia-game-v1-3ca55",
+  storageBucket: "trivia-game-v1-3ca55.firebasestorage.app",
+  messagingSenderId: "263695244287",
+  appId: "1:263695244287:web:01b54af490456884ffa5ca",
+  measurementId: "G-9608JTQVP7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let players = [], questions = [], gameCode = '', gameRef = null;
+let currentQIndex = 0, timerInterval = null, timerSeconds = 30, maxSeconds = 30;
+let scores = {}, lastDeltas = {};
+
+/* ── PLAYERS ── */
+window.addPlayer = function() {
+  const input = document.getElementById('new-player-input');
+  const name = input.value.trim();
+  if (!name || players.length >= 15 || players.includes(name)) { input.value=''; return; }
+  players.push(name);
+  input.value = '';
+  renderPlayers();
+};
+document.getElementById('new-player-input').addEventListener('keydown', e => { if(e.key==='Enter') window.addPlayer(); });
+function renderPlayers() {
+  document.getElementById('player-count-badge').textContent = `${players.length} / 15`;
+  document.getElementById('players-grid').innerHTML = players.map((p,i) => `
+    <div class="player-chip">
+      <span class="player-num">#${i+1}</span>
+      <span style="flex:1">${p}</span>
+      <button class="remove-btn" onclick="removePlayer(${i})">×</button>
+    </div>`).join('');
+}
+window.removePlayer = function(i) { players.splice(i,1); renderPlayers(); };
+
+/* ── QUESTIONS ── */
+let qIdCounter = 0;
+window.addQuestion = function(data) {
+  const id = ++qIdCounter;
+  questions.push({ id, type:'mc', text:'', options:['','','',''], correct:'0', ...(data||{}) });
+  renderQuestions();
+};
+function renderQuestions() {
+  const list = document.getElementById('questions-list');
+  list.innerHTML = questions.map((q,i) => {
+    const typeOpts = [['mc','Multiple Choice'],['tf','True / False'],['text','Text Answer']].map(([v,l]) =>
+      `<option value="${v}"${q.type===v?' selected':''}>${l}</option>`).join('');
+    let answerBlock = '';
+    if (q.type==='mc') {
+      const opts = ['A','B','C','D'].map((l,oi) => `
+        <div class="option-row">
+          <span class="option-letter">${l}</span>
+          <input type="text" value="${q.options[oi]||''}" placeholder="Option ${l}" oninput="updateQOption(${q.id},${oi},this.value)">
+        </div>`).join('');
+      const correctSel = ['A','B','C','D'].map((l,li) =>
+        `<option value="${li}"${q.correct==li?' selected':''}>${l}</option>`).join('');
+      answerBlock = `<div class="options-grid">${opts}</div>
+        <div class="field" style="margin-top:12px">
+          <label>Correct Answer</label>
+          <select onchange="updateQField(${q.id},'correct',this.value)" style="max-width:120px">${correctSel}</select>
+        </div>`;
+    } else if (q.type==='tf') {
+      answerBlock = `<div class="field" style="margin-top:12px">
+        <label>Correct Answer</label>
+        <select onchange="updateQField(${q.id},'correct',this.value)" style="max-width:120px">
+          <option value="true"${q.correct==='true'?' selected':''}>True</option>
+          <option value="false"${q.correct==='false'?' selected':''}>False</option>
+        </select></div>`;
+    } else {
+      answerBlock = `<div class="field" style="margin-top:12px">
+        <label>Correct Answer (case-insensitive match)</label>
+        <input type="text" value="${q.correct||''}" placeholder="Expected answer..." oninput="updateQField(${q.id},'correct',this.value)">
+      </div>`;
+    }
+    return `<div class="question-item">
+      <span class="q-num">Q${i+1}</span>
+      <button class="q-remove" onclick="removeQuestion(${q.id})">×</button>
+      <div class="field"><label>Type</label>
+        <select onchange="changeQType(${q.id},this.value)" style="max-width:200px">${typeOpts}</select></div>
+      <div class="field"><label>Question</label>
+        <textarea placeholder="Enter your question..." oninput="updateQField(${q.id},'text',this.value)">${q.text}</textarea></div>
+      ${answerBlock}
+    </div>`;
+  }).join('');
+}
+window.updateQField = (id,field,value) => { const q=questions.find(q=>q.id===id); if(q) q[field]=value; };
+window.updateQOption = (id,oi,value) => { const q=questions.find(q=>q.id===id); if(q) q.options[oi]=value; };
+window.changeQType = (id,type) => {
+  const q=questions.find(q=>q.id===id); if(!q) return;
+  q.type=type; q.options=['','','','']; q.correct=type==='tf'?'true':'0'; renderQuestions();
+};
+window.removeQuestion = (id) => { questions=questions.filter(q=>q.id!==id); renderQuestions(); };
+
+/* ── CREATE GAME ── */
+window.createGame = async function() {
+  if (!players.length) { alert('Add at least 1 player.'); return; }
+  if (!questions.length) { alert('Add at least 1 question.'); return; }
+  const title = document.getElementById('game-title').value || 'TJA Trivia';
+  const qTime = parseInt(document.getElementById('q-timer').value)||30;
+  const qPts = parseInt(document.getElementById('q-points').value)||10;
+  gameCode = Math.random().toString(36).substring(2,8).toUpperCase();
+  gameRef = ref(db, `games/${gameCode}`);
+  scores = {}; players.forEach(p => scores[p]=0);
+  await set(gameRef, {
+    title, code:gameCode, status:'lobby',
+    questionTimer:qTime, pointsPerQ:qPts,
+    players, questions:questions.map(q=>({type:q.type,text:q.text,options:q.options||[],correct:q.correct})),
+    currentQuestion:-1, scores, answers:{}, createdAt:Date.now()
+  });
+  showLobby();
+};
+
+/* ── LOBBY ── */
+function showLobby() {
+  showScreen('screen-lobby');
+  document.getElementById('lobby-code').textContent = gameCode;
+  document.getElementById('lobby-title-meta').textContent = document.getElementById('game-title').value;
+  const playerURL = `${location.origin}${location.pathname.replace('trivia-host.html','trivia-player.html')}?code=${gameCode}`;
+  document.getElementById('lobby-url').textContent = playerURL;
+  document.getElementById('waiting-grid').innerHTML = players.map(p =>
+    `<div class="waiting-player" id="wp-${sid(p)}"><div class="join-dot"></div><div>${p}</div></div>`).join('');
+  onValue(ref(db,`games/${gameCode}/joined`), snap => {
+    const joined = snap.val()||{};
+    let count=0;
+    players.forEach(p => {
+      const el=document.getElementById(`wp-${sid(p)}`);
+      if(el){ if(joined[sid(p)]){el.classList.add('joined');count++;}else el.classList.remove('joined'); }
+    });
+    document.getElementById('joined-count').textContent = `${count} joined`;
+  });
+}
+window.goToSetup = () => showScreen('screen-setup');
+
+/* ── START GAME ── */
+window.startGame = async function() {
+  await update(gameRef, { status:'active', currentQuestion:0 });
+  currentQIndex=0; scores={}; players.forEach(p=>scores[p]=0);
+  showScreen('screen-game');
+  loadQuestion(0);
+};
+
+/* ── QUESTION FLOW ── */
+function loadQuestion(idx) {
+  const q = questions[idx];
+  maxSeconds = parseInt(document.getElementById('q-timer').value)||30;
+  timerSeconds = maxSeconds; lastDeltas={};
+  update(gameRef, { currentQuestion:idx, status:'question', answers:null, questionStartedAt:Date.now(), timerSeconds:maxSeconds });
+  document.getElementById('q-progress').textContent = `QUESTION ${idx+1} OF ${questions.length}`;
+  document.getElementById('q-text-display').textContent = q.text;
+  document.getElementById('answers-review').style.display='none';
+  const badge = document.getElementById('q-type-badge-el');
+  const typeMap = {mc:['Multiple Choice','badge-mc'],tf:['True / False','badge-tf'],text:['Text Answer','badge-text']};
+  const [label,cls] = typeMap[q.type]||typeMap.mc;
+  badge.textContent=label; badge.className=`q-type-badge ${cls}`;
+  document.getElementById('game-status-meta').textContent = `Q${idx+1} / ${questions.length}`;
+  updateScoreboard(scores);
+  clearInterval(timerInterval);
+  updateTimerUI(timerSeconds,maxSeconds);
+  timerInterval = setInterval(()=>{
+    timerSeconds--;
+    updateTimerUI(timerSeconds,maxSeconds);
+    if(timerSeconds<=0){clearInterval(timerInterval);revealAnswers();}
+  },1000);
+  onValue(ref(db,`games/${gameCode}/answers`), snap=>{
+    const ans=snap.val()||{};
+    const count=Object.keys(ans).length;
+    document.getElementById('response-count').textContent=`${count} / ${players.length} responded`;
+    if(count>=players.length && timerSeconds>0){clearInterval(timerInterval);setTimeout(revealAnswers,600);}
+  });
+}
+
+function updateTimerUI(s,max) {
+  const el=document.getElementById('timer-num'), bar=document.getElementById('timer-bar');
+  el.textContent=s; bar.style.width=((s/max)*100)+'%';
+  el.className='timer-num'; bar.className='timer-bar-fill';
+  if(s<=5){el.classList.add('danger');bar.classList.add('danger');}
+  else if(s<=10){el.classList.add('warn');bar.classList.add('warn');}
+}
+
+async function revealAnswers() {
+  clearInterval(timerInterval);
+  await update(gameRef, {status:'reveal'});
+  const q=questions[currentQIndex];
+  const snap=await get(ref(db,`games/${gameCode}/answers`));
+  const answers=snap.val()||{};
+  const ptsPerQ=parseInt(document.getElementById('q-points').value)||10;
+  lastDeltas={};
+  players.forEach(p=>{
+    const ans=answers[sid(p)];
+    let correct=false;
+    if(ans!==undefined&&ans!==null){
+      correct=String(ans).toLowerCase().trim()===String(q.correct).toLowerCase().trim();
+    }
+    if(correct){scores[p]=(scores[p]||0)+ptsPerQ;lastDeltas[p]=ptsPerQ;}
+  });
+  await update(gameRef,{scores,status:'reveal'});
+  const letters=['A','B','C','D'];
+  let correctDisplay='';
+  if(q.type==='mc') correctDisplay=`✓ Correct: ${letters[parseInt(q.correct)]} — ${q.options[parseInt(q.correct)]}`;
+  else if(q.type==='tf') correctDisplay=`✓ Correct: ${q.correct==='true'?'True':'False'}`;
+  else correctDisplay=`✓ Correct: ${q.correct}`;
+  document.getElementById('correct-reveal').textContent=correctDisplay;
+  document.getElementById('answers-grid').innerHTML=players.map(p=>{
+    const ans=answers[sid(p)];
+    const hasAns=ans!==undefined&&ans!==null;
+    let cls='pending',icon='⏳',label='No answer';
+    if(hasAns){
+      const correct=String(ans).toLowerCase().trim()===String(q.correct).toLowerCase().trim();
+      cls=correct?'correct':'wrong'; icon=correct?'✓':'✗';
+      if(q.type==='mc') label=`${letters[parseInt(String(ans))]} — ${q.options[parseInt(String(ans))]||''}`;
+      else if(q.type==='tf') label=String(ans)==='true'?'True':'False';
+      else label=String(ans);
+    }
+    const pts=lastDeltas[p]?`+${lastDeltas[p]} pts`:(hasAns?'0 pts':'No answer');
+    return `<div class="answer-card ${cls}"><div class="answer-player">${icon} ${p}</div><div class="answer-value">${label}</div><div class="answer-pts">${pts}</div></div>`;
+  }).join('');
+  document.getElementById('answers-review').style.display='block';
+  updateScoreboard(scores);
+  const isLast=currentQIndex>=questions.length-1;
+  document.getElementById('btn-next-q').textContent=isLast?'🏆 See Final Results':'Next Question →';
+}
+
+window.nextQuestion = function() {
+  currentQIndex++;
+  if(currentQIndex>=questions.length) endGame();
+  else loadQuestion(currentQIndex);
+};
+
+function updateScoreboard(sc) {
+  const sorted=Object.entries(sc).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('score-list').innerHTML=sorted.map(([name,pts],i)=>`
+    <li class="score-item">
+      <span class="score-rank">${i+1}</span>
+      <span class="score-name">${name}</span>
+      ${lastDeltas[name]?`<span class="score-delta">+${lastDeltas[name]}</span>`:''}
+      <span class="score-pts">${pts}</span>
+    </li>`).join('');
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  update(gameRef,{status:'ended',scores});
+  showScreen('screen-final');
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('winner-name').textContent=sorted[0]?.[0]||'—';
+  document.getElementById('winner-score').textContent=`${sorted[0]?.[1]||0} points`;
+  document.getElementById('final-score-list').innerHTML=sorted.map(([name,pts],i)=>`
+    <li class="score-item"><span class="score-rank">${i+1}</span><span class="score-name">${name}</span><span class="score-pts">${pts}</span></li>`).join('');
+}
+
+window.resetAll = function() {
+  if(gameRef) remove(gameRef);
+  players=[];questions=[];gameCode='';gameRef=null;
+  currentQIndex=0;scores={};
+  renderPlayers();renderQuestions();
+  showScreen('screen-setup');
+};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function sid(name){ return name.replace(/[^a-zA-Z0-9]/g,'_'); }
+
+// Start with one empty question
+window.addQuestion();
+</script>
+</body>
+</html>

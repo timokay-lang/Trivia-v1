@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TJA Trivia — Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f14; --surface:#16161e; --surface2:#1e1e2a; --border:#2a2a3a;
+  --accent:#7c6dfa; --green:#4ade80; --amber:#fbbf24; --red:#f87171;
+  --text:#e2e2f0; --text-dim:#6b6b8a; --white:#ffffff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 30% 20%,rgba(124,109,250,0.07) 0%,transparent 60%);pointer-events:none;z-index:0;}
+.screen{display:none;position:relative;z-index:1;width:100%;max-width:500px;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* JOIN SCREEN */
+.join-logo{text-align:center;margin-bottom:32px;}
+.join-logo h1{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--white);}
+.join-logo h1 span{color:var(--accent);}
+.join-logo p{font-size:14px;color:var(--text-dim);margin-top:6px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;}
+.card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--text-dim);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.card-title::after{content:'';flex:1;height:1px;background:var(--border);}
+label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;}
+input[type=text]{width:100%;background:var(--bg);border:2px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:14px 16px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+input[type=text]:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,109,250,0.15);}
+.code-input{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:8px;text-align:center;text-transform:uppercase;}
+.field{margin-bottom:16px;}
+.btn{width:100%;padding:15px;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+.btn-primary{background:var(--accent);color:white;}
+.btn-primary:hover{background:#6a5cf0;transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,109,250,0.35);}
+.btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);}
+.error-msg{color:var(--red);font-size:13px;text-align:center;margin-top:10px;min-height:20px;}
+
+/* LOBBY WAIT */
+.lobby-center{text-align:center;padding:20px 0;}
+.lobby-code-show{font-family:'Syne',sans-serif;font-size:48px;font-weight:800;color:var(--accent);letter-spacing:6px;margin:12px 0;}
+.lobby-name{font-size:18px;font-weight:600;color:var(--white);margin-bottom:6px;}
+.lobby-sub{font-size:14px;color:var(--text-dim);}
+.pulse-dot{width:12px;height:12px;border-radius:50%;background:var(--accent);margin:20px auto;animation:pulse 1.2s infinite;}
+
+/* QUESTION SCREEN */
+.q-header{text-align:center;margin-bottom:20px;}
+.q-game-title{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px;}
+.q-progress-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;}
+.q-timer-display{font-family:'Syne',sans-serif;font-size:52px;font-weight:800;color:var(--accent);text-align:center;margin:8px 0;transition:color 0.3s;line-height:1;}
+.q-timer-display.warn{color:var(--amber);}
+.q-timer-display.danger{color:var(--red);animation:pulse 0.5s infinite;}
+.timer-bar-bg{width:100%;height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:20px;}
+.timer-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#a78bfa);border-radius:3px;transition:width 1s linear,background 0.3s;}
+.timer-bar-fill.warn{background:linear-gradient(90deg,var(--amber),#f59e0b);}
+.timer-bar-fill.danger{background:linear-gradient(90deg,var(--red),#fb923c);}
+.q-text-player{font-family:'Syne',sans-serif;font-size:clamp(17px,4vw,22px);font-weight:700;color:var(--white);line-height:1.45;text-align:center;margin-bottom:24px;}
+.mc-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.mc-btn{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:16px 14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:10px;text-align:left;}
+.mc-btn:hover{border-color:var(--accent);background:rgba(124,109,250,0.08);color:var(--white);}
+.mc-btn.selected{border-color:var(--accent);background:rgba(124,109,250,0.15);color:var(--white);}
+.mc-btn:disabled{cursor:not-allowed;opacity:0.6;}
+.mc-letter{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--accent);background:rgba(124,109,250,0.12);padding:3px 8px;border-radius:6px;flex-shrink:0;}
+.tf-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.tf-btn{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:20px;font-family:'Syne',sans-serif;font-size:18px;font-weight:700;cursor:pointer;transition:all 0.2s;text-align:center;}
+.tf-btn.true-btn{color:var(--green);}
+.tf-btn.false-btn{color:var(--red);}
+.tf-btn:hover,.tf-btn.selected{border-color:currentColor;background:rgba(255,255,255,0.05);}
+.tf-btn:disabled{cursor:not-allowed;opacity:0.6;}
+.text-answer-wrap{margin-bottom:16px;}
+.submit-btn{width:100%;padding:16px;border:none;border-radius:10px;background:var(--accent);color:white;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.submit-btn:hover{background:#6a5cf0;transform:translateY(-1px);}
+.submit-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+
+/* SUBMITTED STATE */
+.submitted-view{text-align:center;padding:20px 0;}
+.submitted-icon{font-size:52px;margin-bottom:12px;}
+.submitted-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--green);margin-bottom:6px;}
+.submitted-sub{font-size:14px;color:var(--text-dim);}
+
+/* REVEAL SCREEN */
+.reveal-card{border-radius:14px;padding:24px;text-align:center;margin-bottom:14px;}
+.reveal-correct{background:rgba(74,222,128,0.1);border:2px solid rgba(74,222,128,0.3);}
+.reveal-wrong{background:rgba(248,113,113,0.1);border:2px solid rgba(248,113,113,0.3);}
+.reveal-noans{background:rgba(251,191,36,0.08);border:2px solid rgba(251,191,36,0.2);}
+.reveal-icon{font-size:44px;margin-bottom:10px;}
+.reveal-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px;}
+.reveal-correct .reveal-title{color:var(--green);}
+.reveal-wrong .reveal-title{color:var(--red);}
+.reveal-noans .reveal-title{color:var(--amber);}
+.reveal-answer-show{font-family:'DM Mono',monospace;font-size:13px;color:var(--text-dim);margin-bottom:8px;}
+.reveal-pts{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--accent);}
+.score-display{text-align:center;padding:10px 0;}
+.score-total-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:4px;}
+.score-total{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--white);}
+.waiting-next{text-align:center;color:var(--text-dim);font-size:13px;margin-top:10px;font-family:'DM Mono',monospace;letter-spacing:1px;}
+
+/* ENDED */
+.ended-view{text-align:center;padding:32px 0;}
+.ended-icon{font-size:56px;margin-bottom:12px;}
+.ended-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--amber);margin-bottom:6px;}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:fadeUp 0.4s ease both;}
+.slide-up{animation:slideUp 0.45s ease both;}
+</style>
+</head>
+<body>
+
+<!-- JOIN SCREEN -->
+<div class="screen active" id="screen-join">
+  <div class="join-logo">
+    <h1>TJA <span>Trivia</span></h1>
+    <p>Enter the game code to join</p>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>Game Code</label>
+      <input type="text" class="code-input" id="join-code" maxlength="6" placeholder="XXXXXX" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Your Name / Team</label>
+      <input type="text" id="join-name" placeholder="e.g. Team Alpha" maxlength="30">
+    </div>
+    <button class="btn btn-primary" id="btn-join" onclick="joinGame()">Join Game →</button>
+    <div class="error-msg" id="join-error"></div>
+  </div>
+</div>
+
+<!-- LOBBY WAIT SCREEN -->
+<div class="screen" id="screen-wait">
+  <div class="card animate-in">
+    <div class="lobby-center">
+      <div class="lobby-code-show" id="wait-code"></div>
+      <div class="lobby-name" id="wait-name"></div>
+      <div class="lobby-sub">You're in! Waiting for the host to start...</div>
+      <div class="pulse-dot"></div>
+      <div style="font-size:13px;color:var(--text-dim);font-family:'DM Mono',monospace;letter-spacing:1px;margin-top:8px" id="wait-game-title"></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUESTION SCREEN -->
+<div class="screen" id="screen-question">
+  <div class="q-header">
+    <div class="q-game-title" id="q-game-title-display"></div>
+    <div class="q-progress-text" id="q-progress-display">QUESTION 1</div>
+  </div>
+  <div class="q-timer-display" id="p-timer-num">30</div>
+  <div class="timer-bar-bg"><div class="timer-bar-fill" id="p-timer-bar"></div></div>
+  <div class="card animate-in" id="question-card">
+    <div class="q-text-player" id="p-q-text">Loading...</div>
+    <div id="p-answer-area"></div>
+    <button class="submit-btn" id="p-submit-btn" onclick="submitAnswer()" disabled>Submit Answer</button>
+  </div>
+  <div class="submitted-view" id="submitted-view" style="display:none">
+    <div class="submitted-icon">✅</div>
+    <div class="submitted-title">Answer Submitted!</div>
+    <div class="submitted-sub">Waiting for the timer to finish...</div>
+  </div>
+</div>
+
+<!-- REVEAL SCREEN -->
+<div class="screen" id="screen-reveal">
+  <div class="slide-up">
+    <div id="reveal-result-card" class="reveal-card"></div>
+    <div class="card" style="text-align:center">
+      <div class="score-total-label">TOTAL SCORE</div>
+      <div class="score-total" id="p-total-score">0</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:4px" id="p-score-rank"></div>
+    </div>
+    <div class="waiting-next" id="waiting-next-msg">⏳ Waiting for host to continue...</div>
+  </div>
+</div>
+
+<!-- ENDED SCREEN -->
+<div class="screen" id="screen-ended">
+  <div class="card animate-in ended-view">
+    <div class="ended-icon">🏆</div>
+    <div class="ended-title">Game Over!</div>
+    <div style="font-size:15px;color:var(--text-dim);margin-bottom:24px" id="ended-winner-msg"></div>
+    <div class="score-total-label">YOUR FINAL SCORE</div>
+    <div class="score-total" id="p-final-score" style="margin-bottom:24px">0</div>
+    <div id="ended-standings"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getDatabase, ref, get, update, onValue } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBKO1o0854pgQ53gg67i8eVqLXczR4v9NY",
+  authDomain: "trivia-game-v1-3ca55.firebaseapp.com",
+  databaseURL: "https://trivia-game-v1-3ca55-default-rtdb.firebaseio.com",
+  projectId: "trivia-game-v1-3ca55",
+  storageBucket: "trivia-game-v1-3ca55.firebasestorage.app",
+  messagingSenderId: "263695244287",
+  appId: "1:263695244287:web:01b54af490456884ffa5ca",
+  measurementId: "G-9608JTQVP7"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let gameCode='', playerName='', playerSid='', gameRef=null;
+let gameData={}, currentQIndex=-1, timerInterval=null, timerSeconds=30, maxSeconds=30;
+let myAnswer=null, hasSubmitted=false, myScore=0;
+
+// Pre-fill code from URL
+const urlCode = new URLSearchParams(location.search).get('code');
+if (urlCode) document.getElementById('join-code').value = urlCode.toUpperCase();
+
+/* ── JOIN ── */
+window.joinGame = async function() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const name = document.getElementById('join-name').value.trim();
+  const errEl = document.getElementById('join-error');
+  errEl.textContent = '';
+  if (code.length !== 6) { errEl.textContent = 'Enter a valid 6-character code.'; return; }
+  if (!name) { errEl.textContent = 'Enter your name or team name.'; return; }
+
+  const snap = await get(ref(db, `games/${code}`));
+  if (!snap.exists()) { errEl.textContent = '❌ Game not found. Check the code.'; return; }
+  const data = snap.val();
+  if (data.status === 'ended') { errEl.textContent = '❌ This game has already ended.'; return; }
+  if (!data.players.includes(name)) { errEl.textContent = `❌ "${name}" is not on the player list. Check your name.`; return; }
+
+  gameCode = code; playerName = name; playerSid = sid(name);
+  gameRef = ref(db, `games/${code}`);
+  gameData = data; myScore = data.scores?.[name] || 0;
+
+  // Mark as joined
+  await update(ref(db, `games/${code}/joined`), { [playerSid]: true });
+
+  // Show wait screen
+  document.getElementById('wait-code').textContent = code;
+  document.getElementById('wait-name').textContent = name;
+  document.getElementById('wait-game-title').textContent = data.title || 'TJA Trivia';
+  showScreen('screen-wait');
+
+  // Watch game
+  onValue(gameRef, snap => {
+    if (!snap.exists()) return;
+    const d = snap.val();
+    gameData = d;
+    handleGameState(d);
+  });
+};
+
+function handleGameState(d) {
+  if (d.status === 'ended') { showFinalResults(d); return; }
+  if (d.status === 'question' && d.currentQuestion !== currentQIndex) {
+    currentQIndex = d.currentQuestion;
+    hasSubmitted = false; myAnswer = null;
+    showQuestion(d);
+  }
+  if (d.status === 'reveal' && currentScreen() !== 'screen-reveal') {
+    showReveal(d);
+  }
+  if (d.status === 'lobby' && currentScreen() !== 'screen-wait') {
+    showScreen('screen-wait');
+  }
+}
+
+/* ── QUESTION ── */
+function showQuestion(d) {
+  const q = d.questions[d.currentQuestion];
+  maxSeconds = d.timerSeconds || 30;
+  timerSeconds = maxSeconds;
+  showScreen('screen-question');
+  document.getElementById('q-game-title-display').textContent = d.title || 'TJA Trivia';
+  document.getElementById('q-progress-display').textContent = `QUESTION ${d.currentQuestion+1} OF ${d.questions.length}`;
+  document.getElementById('p-q-text').textContent = q.text;
+  document.getElementById('submitted-view').style.display = 'none';
+  document.getElementById('question-card').style.display = 'block';
+  renderAnswerArea(q);
+  document.getElementById('p-submit-btn').disabled = true;
+
+  clearInterval(timerInterval);
+  updatePlayerTimer(timerSeconds, maxSeconds);
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    updatePlayerTimer(timerSeconds, maxSeconds);
+    if (timerSeconds <= 0) { clearInterval(timerInterval); lockAnswers(); }
+  }, 1000);
+}
+
+function renderAnswerArea(q) {
+  const area = document.getElementById('p-answer-area');
+  myAnswer = null;
+  if (q.type === 'mc') {
+    const letters = ['A','B','C','D'];
+    area.innerHTML = `<div class="mc-options">${q.options.map((o,i)=>`
+      <button class="mc-btn" onclick="selectMC(${i})" data-idx="${i}">
+        <span class="mc-letter">${letters[i]}</span>
+        <span>${o}</span>
+      </button>`).join('')}</div>`;
+  } else if (q.type === 'tf') {
+    area.innerHTML = `<div class="tf-options">
+      <button class="tf-btn true-btn" onclick="selectTF('true')">✓ True</button>
+      <button class="tf-btn false-btn" onclick="selectTF('false')">✗ False</button>
+    </div>`;
+  } else {
+    area.innerHTML = `<div class="text-answer-wrap">
+      <input type="text" id="text-answer-input" placeholder="Type your answer here..." style="font-size:16px;padding:14px 16px;"
+        oninput="document.getElementById('p-submit-btn').disabled=!this.value.trim()">
+    </div>`;
+  }
+}
+
+window.selectMC = function(idx) {
+  document.querySelectorAll('.mc-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelector(`.mc-btn[data-idx="${idx}"]`).classList.add('selected');
+  myAnswer = String(idx);
+  document.getElementById('p-submit-btn').disabled = false;
+};
+window.selectTF = function(val) {
+  document.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelector(`.tf-btn.${val==='true'?'true':'false'}-btn`).classList.add('selected');
+  myAnswer = val;
+  document.getElementById('p-submit-btn').disabled = false;
+};
+
+function lockAnswers() {
+  document.querySelectorAll('.mc-btn,.tf-btn').forEach(b=>b.disabled=true);
+  const textInput = document.getElementById('text-answer-input');
+  if (textInput) { myAnswer = textInput.value.trim(); textInput.disabled = true; }
+  document.getElementById('p-submit-btn').disabled = true;
+  if (!hasSubmitted) submitAnswer();
+}
+
+window.submitAnswer = function() {
+  if (hasSubmitted) return;
+  const textInput = document.getElementById('text-answer-input');
+  if (textInput && !myAnswer) myAnswer = textInput.value.trim();
+  if (!myAnswer && myAnswer !== '0') return;
+  hasSubmitted = true;
+  clearInterval(timerInterval);
+
+  update(ref(db, `games/${gameCode}/answers`), { [playerSid]: myAnswer });
+
+  document.getElementById('question-card').style.display = 'none';
+  document.getElementById('submitted-view').style.display = 'block';
+};
+
+function updatePlayerTimer(s, max) {
+  const el = document.getElementById('p-timer-num');
+  const bar = document.getElementById('p-timer-bar');
+  el.textContent = s; bar.style.width = ((s/max)*100)+'%';
+  el.className = 'q-timer-display'; bar.className = 'timer-bar-fill';
+  if(s<=5){el.classList.add('danger');bar.classList.add('danger');}
+  else if(s<=10){el.classList.add('warn');bar.classList.add('warn');}
+}
+
+/* ── REVEAL ── */
+function showReveal(d) {
+  clearInterval(timerInterval);
+  const q = d.questions[currentQIndex];
+  const answers = d.answers || {};
+  const myAns = answers[playerSid];
+  const hasAns = myAns !== undefined && myAns !== null;
+  const correct = hasAns && String(myAns).toLowerCase().trim() === String(q.correct).toLowerCase().trim();
+  const ptsPerQ = d.pointsPerQ || 10;
+
+  if (correct) myScore += ptsPerQ;
+
+  const letters = ['A','B','C','D'];
+  let correctDisplay = '';
+  if(q.type==='mc') correctDisplay = `Correct: ${letters[parseInt(q.correct)]} — ${q.options[parseInt(q.correct)]}`;
+  else if(q.type==='tf') correctDisplay = `Correct: ${q.correct==='true'?'True':'False'}`;
+  else correctDisplay = `Correct: ${q.correct}`;
+
+  // Use actual score from Firebase
+  const actualScore = d.scores?.[playerName] ?? myScore;
+  myScore = actualScore;
+
+  let resultHTML = '';
+  if (!hasAns) {
+    resultHTML = `<div class="reveal-card reveal-noans">
+      <div class="reveal-icon">⏳</div>
+      <div class="reveal-title">Time's Up!</div>
+      <div class="reveal-answer-show">${correctDisplay}</div>
+      <div class="reveal-pts">+0 pts</div>
+    </div>`;
+  } else if (correct) {
+    resultHTML = `<div class="reveal-card reveal-correct">
+      <div class="reveal-icon">🎉</div>
+      <div class="reveal-title">Correct!</div>
+      <div class="reveal-answer-show">${correctDisplay}</div>
+      <div class="reveal-pts">+${ptsPerQ} pts</div>
+    </div>`;
+  } else {
+    resultHTML = `<div class="reveal-card reveal-wrong">
+      <div class="reveal-icon">❌</div>
+      <div class="reveal-title">Not Quite!</div>
+      <div class="reveal-answer-show">${correctDisplay}</div>
+      <div class="reveal-pts">+0 pts</div>
+    </div>`;
+  }
+
+  document.getElementById('reveal-result-card').outerHTML = resultHTML;
+  document.getElementById('p-total-score').textContent = actualScore;
+
+  // Rank
+  const scores = d.scores || {};
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const rank = sorted.findIndex(([n])=>n===playerName)+1;
+  document.getElementById('p-score-rank').textContent = `Rank #${rank} of ${sorted.length}`;
+
+  showScreen('screen-reveal');
+}
+
+/* ── FINAL ── */
+function showFinalResults(d) {
+  clearInterval(timerInterval);
+  const scores = d.scores || {};
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  const winner = sorted[0]?.[0] || '—';
+  const myFinalScore = scores[playerName] || 0;
+
+  document.getElementById('p-final-score').textContent = myFinalScore;
+  document.getElementById('ended-winner-msg').textContent =
+    winner === playerName ? '🏆 You won! Congratulations!' : `Winner: ${winner} with ${sorted[0]?.[1]||0} pts`;
+
+  document.getElementById('ended-standings').innerHTML = `
+    <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px">FINAL STANDINGS</div>
+    ${sorted.map(([name,pts],i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:6px;background:var(--surface2);border:1.5px solid ${name===playerName?'var(--accent)':'var(--border)'};">
+        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:${i===0?'var(--amber)':'var(--text-dim)'};width:24px">${i+1}</span>
+        <span style="flex:1;font-size:14px;font-weight:600;color:${name===playerName?'var(--accent)':'var(--text)'}">${name}${name===playerName?' (You)':''}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent)">${pts}</span>
+      </div>`).join('')}`;
+
+  showScreen('screen-ended');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function currentScreen() {
+  return document.querySelector('.screen.active')?.id || '';
+}
+function sid(name){ return name.replace(/[^a-zA-Z0-9]/g,'_'); }
+</script>
+</body>
+</html>
